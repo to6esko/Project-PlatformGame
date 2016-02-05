@@ -101,3 +101,34 @@ Coin.prototype.type = "coin";
 var simpleLevel = new Level(simpleLevelPlan);
 console.log(simpleLevel.width, "by", simpleLevel.height);
 // → 22 by 9
+//Display
+function elt(name, className) {
+	var elt = document.createElement(name);
+	if (className) {
+		elt.className = className;
+	}
+	return elt;
+}
+
+function DOMDisplay(parent, level) {
+	this.wrap = parent.appendChild(elt('div', 'game'));
+	this.level = level;
+	this.wrap.appendChild(this.drawBacgound());
+	this.actorLayer = null;
+	this.drawFrame();
+}
+
+var scale = 20;
+
+DOMDisplay.prototype.drawBackground = function() {
+	var table = elt("table", "background");
+	table.style.width = this.level.width * scale + "px";
+	this.level.grid.forEach(function(row) {
+		var rowElt = table.appendChild(elt("tr"));
+		rowElt.style.height = scale + "px";
+		row.forEach(function(type) {
+			rowElt.appendChild(elt("td", type));
+		});
+	});
+	return table;
+};
