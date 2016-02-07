@@ -17,9 +17,11 @@ function Level(plan) {
   this.actors = [];
 
   for (var y = 0; y < this.height; y++) {
-    var line = plan[y], gridLine = [];
+    var line = plan[y],
+      gridLine = [];
     for (var x = 0; x < this.width; x++) {
-      var ch = line[x], fieldType = null;
+      var ch = line[x],
+        fieldType = null;
       var Actor = actorChars[ch];
       if (Actor)
         this.actors.push(new Actor(new Vector(x, y), ch));
@@ -43,7 +45,8 @@ Level.prototype.isFinished = function() {
 };
 
 function Vector(x, y) {
-  this.x = x; this.y = y;
+  this.x = x;
+  this.y = y;
 }
 Vector.prototype.plus = function(other) {
   return new Vector(this.x + other.x, this.y + other.y);
@@ -55,7 +58,9 @@ Vector.prototype.times = function(factor) {
 var actorChars = {
   "@": Player,
   "o": Coin,
-  "=": Lava, "|": Lava, "v": Lava
+  "=": Lava,
+  "|": Lava,
+  "v": Lava
 };
 
 function Player(pos) {
@@ -122,7 +127,7 @@ DOMDisplay.prototype.drawActors = function() {
   var wrap = elt("div");
   this.level.actors.forEach(function(actor) {
     var rect = wrap.appendChild(elt("div",
-                                    "actor " + actor.type));
+      "actor " + actor.type));
     rect.style.width = actor.size.x * scale + "px";
     rect.style.height = actor.size.y * scale + "px";
     rect.style.left = actor.pos.x * scale + "px";
@@ -145,12 +150,14 @@ DOMDisplay.prototype.scrollPlayerIntoView = function() {
   var margin = width / 3;
 
   // The viewport
-  var left = this.wrap.scrollLeft, right = left + width;
-  var top = this.wrap.scrollTop, bottom = top + height;
+  var left = this.wrap.scrollLeft,
+    right = left + width;
+  var top = this.wrap.scrollTop,
+    bottom = top + height;
 
   var player = this.level.player;
   var center = player.pos.plus(player.size.times(0.5))
-                 .times(scale);
+    .times(scale);
 
   if (center.x < left + margin)
     this.wrap.scrollLeft = center.x - margin;
@@ -188,10 +195,10 @@ Level.prototype.actorAt = function(actor) {
   for (var i = 0; i < this.actors.length; i++) {
     var other = this.actors[i];
     if (other != actor &&
-        actor.pos.x + actor.size.x > other.pos.x &&
-        actor.pos.x < other.pos.x + other.size.x &&
-        actor.pos.y + actor.size.y > other.pos.y &&
-        actor.pos.y < other.pos.y + other.size.y)
+      actor.pos.x + actor.size.x > other.pos.x &&
+      actor.pos.x < other.pos.x + other.size.x &&
+      actor.pos.y + actor.size.y > other.pos.y &&
+      actor.pos.y < other.pos.y + other.size.y)
       return other;
   }
 };
@@ -221,7 +228,8 @@ Lava.prototype.act = function(step, level) {
     this.speed = this.speed.times(-1);
 };
 
-var wobbleSpeed = 8, wobbleDist = 0.07;
+var wobbleSpeed = 8,
+  wobbleDist = 0.07;
 
 Coin.prototype.act = function(step) {
   this.wobble += step * wobbleSpeed;
@@ -288,18 +296,23 @@ Level.prototype.playerTouched = function(type, actor) {
       return other != actor;
     });
     if (!this.actors.some(function(actor) {
-      return actor.type == "coin";
-    })) {
+        return actor.type == "coin";
+      })) {
       this.status = "won";
       this.finishDelay = 1;
     }
   }
 };
 
-var arrowCodes = {37: "left", 38: "up", 39: "right"};
-
+var arrowCodes = {
+  37: "left",
+  38: "up",
+  39: "right"
+};
+/*
 function trackKeys(codes) {
   var pressed = Object.create(null);
+
   function handler(event) {
     if (codes.hasOwnProperty(event.keyCode)) {
       var down = event.type == "keydown";
@@ -311,9 +324,10 @@ function trackKeys(codes) {
   addEventListener("keyup", handler);
   return pressed;
 }
-
+*/
 function runAnimation(frameFunc) {
   var lastTime = null;
+
   function frame(time) {
     var stop = false;
     if (lastTime != null) {
@@ -330,29 +344,82 @@ function runAnimation(frameFunc) {
 var arrows = trackKeys(arrowCodes);
 
 function runLevel(level, Display, andThen) {
-  var display = new Display(document.body, level);
-  runAnimation(function(step) {
-    level.animate(step, arrows);
-    display.drawFrame(step);
-    if (level.isFinished()) {
-      display.clear();
-      if (andThen)
-        andThen(level.status);
-      return false;
+    var display = new Display(document.body, level);
+    var running = "yes";
+    function handleKey(event) {
+      if (event.keyCode == 27) {
+        if (running == "no") {
+          running = "yes";
+          runAnimation(animation);
+        } else if (running == "pausing") {
+          running = "yes";
+        } else if (running == "yes") {
+          running = "pausing";
+        }
+      }
     }
-  });
-}
+    addEventListener("keydown", handleKey);
+    var arrows = trackKeys(arrowCodes);
+
+    function animation(step) {
+      if (running == "pausing") {
+        running = "no";
+        return false;
+      }
+
+      level.animate(step, arrows);
+      display.drawFrame(step);
+      if (level.isFinished()) {
+        display.clear();
+        // Here we remove all our event handlers
+        removeEventListener("keydown", handleKey);
+        arrows.unregister(); // (see change to trackKeys below)
+        if (andThen)
+          andThen(level.status);
+        return false;
+      }
+    }
+    runAnimation(animation);
+  }
+
+  function trackKeys(codes) {
+    var pressed = Object.create(null);
+    function handler(event) {
+      if (codes.hasOwnProperty(event.keyCode)) {
+        var state = event.type == "keydown";
+        pressed[codes[event.keyCode]] = state;
+        event.preventDefault();
+      }
+    }
+    addEventListener("keydown", handler);
+    addEventListener("keyup", handler);
+
+    // This is new -- it allows runLevel to clean up its handlers
+    pressed.unregister = function() {
+      removeEventListener("keydown", handler);
+      removeEventListener("keyup", handler);
+    };
+    // End of new code
+    return pressed;
+  }
+
 
 function runGame(plans, Display) {
-  function startLevel(n) {
+  function startLevel(n,lives) {
     runLevel(new Level(plans[n]), Display, function(status) {
-      if (status == "lost")
-        startLevel(n);
+      if (status == "lost"){
+        if (lives>0) {
+          startLevel(n,lives-1);
+        }else{
+          console.log('Game over');
+          startLevel(0,3);
+        }
+      }
       else if (n < plans.length - 1)
-        startLevel(n + 1);
+        startLevel(n + 1,lives);
       else
         console.log("You win!");
     });
   }
-  startLevel(0);
+  startLevel(0,3);
 }
